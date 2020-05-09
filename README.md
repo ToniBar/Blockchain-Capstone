@@ -18,12 +18,12 @@ The capstone will build upon the knowledge you have gained in the course in orde
 2. contract address SolnSquareVerifier: https://rinkeby.etherscan.io/address/0xd6356b7f6177e24c91ef0bfe1717e3d505249db7
 3. opensea assets: https://rinkeby.opensea.io/assets/real-estate-token-v7
 4. Minted token id's: 0, 1, 2, 3, 4, 5, 6, 10, 20, 30, 40, 50, 60, 70, 80, 90
-5. Tokens sold to given addresses:
-	token id 50 - 0x0244B867DC8189dD087baDBF611Cff1dfE083c21
-	token id 60 - 0xDD8341D4E7CDAAA29a7676e49C235C99CBc40C6b
-	token id 70 - 0x188d505DEB29fEe066602E74C8487d662e2561e8
-	token id 80 - 0x7A3484637be36531d27cA3eB6562f2a254373B02
-	token id 90 - 0x7A3484637be36531d27cA3eB6562f2a254373B02
+5. Tokens sold to given addresses:  
+	token id 50 - 0x0244B867DC8189dD087baDBF611Cff1dfE083c21  
+	token id 60 - 0xDD8341D4E7CDAAA29a7676e49C235C99CBc40C6b  
+	token id 70 - 0x188d505DEB29fEe066602E74C8487d662e2561e8  
+	token id 80 - 0x7A3484637be36531d27cA3eB6562f2a254373B02  
+	token id 90 - 0x7A3484637be36531d27cA3eB6562f2a254373B02  
 
 6. contract abi:
 
