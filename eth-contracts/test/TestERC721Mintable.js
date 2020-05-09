@@ -14,7 +14,7 @@ contract('TestERC721Mintable', accounts => {
             let tokenId = 0;
 
             for(var i = 2; i < 10; i++){
-                this.contract.mint(accounts[i], tokenId++, "");
+                this.contract.mint(accounts[i], tokenId++);
             }
         })
 
@@ -33,12 +33,13 @@ contract('TestERC721Mintable', accounts => {
 
         // token uri should be complete i.e: https://s3-us-west-2.amazonaws.com/udacity-blockchain/capstone/1
         it('should return token uri', async function () { 
-            var token_uri = this.contract.tokenURI(0, {from: account_one});
-            assert.equal(uri, "https://s3-us-west-2.amazonaws.com/udacity-blockchain/capstone/0", "Wrong token uri") 
+            var token_uri = await this.contract.tokenURI(0, {from: account_one});
+
+            assert.equal(token_uri, "https://s3-us-west-2.amazonaws.com/udacity-blockchain/capstone/0", "Wrong token uri") 
         })
 
         it('should transfer token from one owner to another', async function () { 
-            await this.contract._transferFrom(accounts[2], accounts[12], 0, {from:accounts[2]});
+            await this.contract.transferFrom(accounts[2], accounts[12], 0, {from:accounts[2]});
             var t_owner = await this.contract.ownerOf(0);
 
             assert.equal(t_owner, accounts[12], "Incorrect token transfer");
@@ -54,13 +55,13 @@ contract('TestERC721Mintable', accounts => {
         it('should fail when minting when address is not contract owner', async function () { 
             let err = 0;
             try{
-                await this.contract.mint(accounts[11], 10, "", {from: accounts[20]});
+                await this.contract.mint(accounts[11], 10, {from: accounts[20]});
             }
-            catch(r){
+            catch(r){                
                 err++;
             }
 
-            assert.equal(r, 1, "Toked minted by invaled account");
+            assert.equal(err, 1, "Toked minted by invaled account");
         })
 
         it('should return contract owner', async function () { 

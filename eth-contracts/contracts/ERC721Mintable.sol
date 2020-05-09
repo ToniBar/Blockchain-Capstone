@@ -14,85 +14,144 @@ contract Ownable {
     //  4) fill out the transferOwnership function
     //  5) create an event that emits anytime ownerShip is transfered (including in the constructor)
 
-    // contract owner
-    address internal _owner;
+    address private _owner;
 
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    /* Modifiers */
-    modifier onlyOwner()
-    {
-        require(msg.sender == _owner, "Caller is not the owner");
-        _;
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    constructor () internal {
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), _owner);
     }
 
-    /* Events */
-    event OwnershipTransfer();
-
-    // constructor
-    constructor(address owner) public
-    {
-        _owner = owner;
-    }
-
-    function getOwner() public view returns(address){
+    function getOwner() public view returns (address) {
         return _owner;
     }
 
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(isOwner(), "Ownable: caller is not the owner");
+        _;
+    }
+
+    /**
+     * @dev Returns true if the caller is the current owner.
+     */
+    function isOwner() public view returns (bool) {
+        return msg.sender == _owner;
+    }
+
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
+     *
+     * > Note: Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
+     */
+    function renounceOwnership() public onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
     function transferOwnership(address newOwner) public onlyOwner {
-        // TODO add functionality to transfer control of the contract to a newOwner.
-        // make sure the new owner is a real address
-        require(newOwner != address(0), "Invalid owner address");
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     */
+    function _transferOwnership(address newOwner) internal {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferred(_owner, newOwner);
         _owner = newOwner;
     }
 }
 
 //  TODO's: Create a Pausable contract that inherits from the Ownable contract
 //  1) create a private '_paused' variable of type bool
-//  2) create a public setter using the inherited onlyOwner modifier
+//  2) create a public setter using the inherited onlyOwner modifier*****
 //  3) create an internal constructor that sets the _paused variable to false
 //  4) create 'whenNotPaused' & 'paused' modifier that throws in the appropriate situation
 //  5) create a Paused & Unpaused event that emits the address that triggered the event
 
-contract Pausable is Ownable
-{
+contract Pausable is Ownable {
+    /**
+     * @dev Emitted when the pause is triggered by a pauser (`account`).
+     */
+    event Paused(address account);
+
+    /**
+     * @dev Emitted when the pause is lifted by a pauser (`account`).
+     */
+    event Unpaused(address account);
+
     bool private _paused;
 
-    /* Modifiers */
-    /*modifier onlyOwner()
-    {
-        require(msg.sender == super._owner, "Caller is not the owner");
-        _;
-    }*/
-
-    modifier whenNotPaused()
-    {
-        require(_paused == false, "Contract is paused");
-        _;
-    }
-
-    modifier paused()
-    {
-        require(_paused == true, "Contract is not paused");
-        _;
-    }
-
-    /* Events */
-    event Paused();
-    event Unpaused();
-
-    constructor() public
-    {
+    /**
+     * @dev Initializes the contract in unpaused state. Assigns the Pauser role
+     * to the deployer.
+     */
+    constructor () internal {
         _paused = false;
+    }
+
+    /**
+     * @dev Returns true if the contract is paused, and false otherwise.
+     */
+    function paused() public view returns (bool) {
+        return _paused;
+    }
+
+    /**
+     * @dev Modifier to make a function callable only when the contract is not paused.
+     */
+    modifier whenNotPaused() {
+        require(!_paused, "Pausable: paused");
+        _;
+    }
+
+    /**
+     * @dev Modifier to make a function callable only when the contract is paused.
+     */
+    modifier whenPaused() {
+        require(_paused, "Pausable: not paused");
+        _;
+    }
+
+    /**
+     * @dev Called by a pauser to pause, triggers stopped state.
+     */
+    function pause() public onlyOwner whenNotPaused {
+        _paused = true;
+        emit Paused(msg.sender);
+    }
+
+    /**
+     * @dev Called by a pauser to unpause, returns to normal state.
+     */
+    function unpause() public onlyOwner whenPaused {
+        _paused = false;
+        emit Unpaused(msg.sender);
     }
 
     function setPausable(bool ispaused) public onlyOwner
     {
         _paused = ispaused;
-    }
-
-    function isOwner(address own) public view returns(bool)
-    {
-        return own == _owner;
     }
 }
 
@@ -133,13 +192,6 @@ contract ERC165 {
 }
 
 contract ERC721 is Pausable, ERC165 {
-
-    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
-
-    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
-
-    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
-
     using SafeMath for uint256;
     using Address for address;
     using Counters for Counters.Counter;
@@ -155,66 +207,106 @@ contract ERC721 is Pausable, ERC165 {
     mapping (uint256 => address) private _tokenApprovals;
 
     // Mapping from owner to number of owned token
-    // IMPORTANT: this mapping uses Counters lib which is used to protect overflow when incrementing/decrementing a uint
-    // use the following functions when interacting with Counters: increment(), decrement(), and current() to get the value
-    // see: https://github.com/OpenZeppelin/openzeppelin-solidity/blob/master/contracts/drafts/Counters.sol
     mapping (address => Counters.Counter) private _ownedTokensCount;
 
     // Mapping from owner to operator approvals
     mapping (address => mapping (address => bool)) private _operatorApprovals;
 
+    /*
+     *     bytes4(keccak256('balanceOf(address)')) == 0x70a08231
+     *     bytes4(keccak256('ownerOf(uint256)')) == 0x6352211e
+     *     bytes4(keccak256('approve(address,uint256)')) == 0x095ea7b3
+     *     bytes4(keccak256('getApproved(uint256)')) == 0x081812fc
+     *     bytes4(keccak256('setApprovalForAll(address,bool)')) == 0xa22cb465
+     *     bytes4(keccak256('isApprovedForAll(address,address)')) == 0xe985e9c
+     *     bytes4(keccak256('transferFrom(address,address,uint256)')) == 0x23b872dd
+     *     bytes4(keccak256('safeTransferFrom(address,address,uint256)')) == 0x42842e0e
+     *     bytes4(keccak256('safeTransferFrom(address,address,uint256,bytes)')) == 0xb88d4fde
+     *
+     *     => 0x70a08231 ^ 0x6352211e ^ 0x095ea7b3 ^ 0x081812fc ^
+     *        0xa22cb465 ^ 0xe985e9c ^ 0x23b872dd ^ 0x42842e0e ^ 0xb88d4fde == 0x80ac58cd
+     */
     bytes4 private constant _INTERFACE_ID_ERC721 = 0x80ac58cd;
+
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+    event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
 
     constructor () public {
         // register the supported interfaces to conform to ERC721 via ERC165
         _registerInterface(_INTERFACE_ID_ERC721);
     }
 
+    /**
+     * @dev Gets the balance of the specified address.
+     * @param owner address to query the balance of
+     * @return uint256 representing the amount owned by the passed address
+     */
     function balanceOf(address owner) public view returns (uint256) {
-        // TODO return the token balance of given address
-        // TIP: remember the functions to use for Counters. you can refresh yourself with the link above
+        require(owner != address(0), "ERC721: balance query for the zero address");
+
         return _ownedTokensCount[owner].current();
     }
 
+    /**
+     * @dev Gets the owner of the specified token ID.
+     * @param tokenId uint256 ID of the token to query the owner of
+     * @return address currently marked as the owner of the given token ID
+     */
     function ownerOf(uint256 tokenId) public view returns (address) {
-        // TODO return the owner of the given tokenId
-        return _tokenOwner[tokenId];
+        address owner = _tokenOwner[tokenId];
+        require(owner != address(0), "ERC721: owner query for nonexistent token");
+
+        return owner;
     }
 
-//    @dev Approves another address to transfer the given token ID
+    /**
+     * @dev Approves another address to transfer the given token ID
+     * The zero address indicates there is no approved address.
+     * There can only be one approved address per token at a given time.
+     * Can only be called by the token owner or an approved operator.
+     * @param to address to be approved for the given token ID
+     * @param tokenId uint256 ID of the token to be approved
+     */
     function approve(address to, uint256 tokenId) public {
-        // TODO require the given address to not be the owner of the tokenId
-        require(_tokenOwner[tokenId] != to, "Given address is already owner of the given token");
+        address owner = ownerOf(tokenId);
+        require(to != owner, "ERC721: approval to current owner");
 
-        // TODO require the msg sender to be the owner of the contract or isApprovedForAll() to be true
-        require(isOwner(msg.sender) || isApprovedForAll(msg.sender, to), "Address approval not allowed");
+        require(msg.sender == owner || isApprovedForAll(owner, msg.sender),
+            "ERC721: approve caller is not owner nor approved for all"
+        );
 
-        // TODO add 'to' address to token approvals
         _tokenApprovals[tokenId] = to;
-
-        // TODO emit Approval Event
-        emit Approval(_tokenOwner[tokenId], to, tokenId);
+        emit Approval(owner, to, tokenId);
     }
 
+    /**
+     * @dev Gets the approved address for a token ID, or zero if no address set
+     * Reverts if the token ID does not exist.
+     * @param tokenId uint256 ID of the token to query the approval of
+     * @return address currently approved for the given token ID
+     */
     function getApproved(uint256 tokenId) public view returns (address) {
-        // TODO return token approval if it exists
+        require(_exists(tokenId), "ERC721: approved query for nonexistent token");
+
         return _tokenApprovals[tokenId];
     }
 
     /**
      * @dev Sets or unsets the approval of a given operator
-     * An operator is allowed to transfer all tokens of the sender on their behalf
+     * An operator is allowed to transfer all tokens of the sender on their behalf.
      * @param to operator address to set the approval
      * @param approved representing the status of the approval to be set
      */
     function setApprovalForAll(address to, bool approved) public {
-        require(to != msg.sender, "Address is same as sender");
+        require(to != msg.sender, "ERC721: approve to caller");
+
         _operatorApprovals[msg.sender][to] = approved;
         emit ApprovalForAll(msg.sender, to, approved);
     }
 
     /**
-     * @dev Tells whether an operator is approved by a given owner
+     * @dev Tells whether an operator is approved by a given owner.
      * @param owner owner address which you want to query the approval of
      * @param operator operator address which you want to query the approval of
      * @return bool whether the given operator is approved by the given owner
@@ -223,23 +315,55 @@ contract ERC721 is Pausable, ERC165 {
         return _operatorApprovals[owner][operator];
     }
 
+    /**
+     * @dev Transfers the ownership of a given token ID to another address.
+     * Usage of this method is discouraged, use `safeTransferFrom` whenever possible.
+     * Requires the msg.sender to be the owner, approved, or operator.
+     * @param from current owner of the token
+     * @param to address to receive the ownership of the given token ID
+     * @param tokenId uint256 ID of the token to be transferred
+     */
     function transferFrom(address from, address to, uint256 tokenId) public {
-        require(_isApprovedOrOwner(msg.sender, tokenId),"Sender is not allowed to transfer token");
+        //solhint-disable-next-line max-line-length
+        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");
 
         _transferFrom(from, to, tokenId);
     }
 
+    /**
+     * @dev Safely transfers the ownership of a given token ID to another address
+     * If the target address is a contract, it must implement `onERC721Received`,
+     * which is called upon a safe transfer, and return the magic value
+     * `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`; otherwise,
+     * the transfer is reverted.
+     * Requires the msg.sender to be the owner, approved, or operator
+     * @param from current owner of the token
+     * @param to address to receive the ownership of the given token ID
+     * @param tokenId uint256 ID of the token to be transferred
+     */
     function safeTransferFrom(address from, address to, uint256 tokenId) public {
         safeTransferFrom(from, to, tokenId, "");
     }
 
+    /**
+     * @dev Safely transfers the ownership of a given token ID to another address
+     * If the target address is a contract, it must implement `onERC721Received`,
+     * which is called upon a safe transfer, and return the magic value
+     * `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`; otherwise,
+     * the transfer is reverted.
+     * Requires the msg.sender to be the owner, approved, or operator
+     * @param from current owner of the token
+     * @param to address to receive the ownership of the given token ID
+     * @param tokenId uint256 ID of the token to be transferred
+     * @param _data bytes data to send along with a safe transfer check
+     */
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) public {
         transferFrom(from, to, tokenId);
-        require(_checkOnERC721Received(from, to, tokenId, _data), "Target address didn't receive token");
+        require(_checkOnERC721Received(from, to, tokenId, _data), "ERC721: transfer to non ERC721Receiver implementer");
     }
 
     /**
-     * @dev Returns whether the specified token exists
+     * @dev Returns whether the specified token exists.
      * @param tokenId uint256 ID of the token to query the existence of
      * @return bool whether the token exists
      */
@@ -249,59 +373,87 @@ contract ERC721 is Pausable, ERC165 {
     }
 
     /**
-     * @dev Returns whether the given spender can transfer a given token ID
+     * @dev Returns whether the given spender can transfer a given token ID.
      * @param spender address of the spender to query
      * @param tokenId uint256 ID of the token to be transferred
      * @return bool whether the msg.sender is approved for the given token ID,
      * is an operator of the owner, or is the owner of the token
      */
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
+        require(_exists(tokenId), "ERC721: operator query for nonexistent token");
         address owner = ownerOf(tokenId);
         return (spender == owner || getApproved(tokenId) == spender || isApprovedForAll(owner, spender));
     }
 
-    // @dev Internal function to mint a new token
-    // TIP: remember the functions to use for Counters. you can refresh yourself with the link above
+    /**
+     * @dev Internal function to mint a new token.
+     * Reverts if the given token ID already exists.
+     * @param to The address that will own the minted token
+     * @param tokenId uint256 ID of the token to be minted
+     */
     function _mint(address to, uint256 tokenId) internal {
-        require(to != address(0), "Invalid address");
+        require(to != address(0), "ERC721: mint to the zero address");
+        require(!_exists(tokenId), "ERC721: token already minted");
 
-        // TODO revert if given tokenId already exists or given address is invalid
-        require(!_exists(tokenId), "TokenId already exists");
-
-        // TODO mint tokenId to given address & increase token count of owner
         _tokenOwner[tokenId] = to;
         _ownedTokensCount[to].increment();
 
-        // TODO emit Transfer event
-        emit Transfer(address(0x0), to, tokenId);
+        emit Transfer(address(0), to, tokenId);
     }
 
-    // @dev Internal function to transfer ownership of a given token ID to another address.
-    // TIP: remember the functions to use for Counters. you can refresh yourself with the link above
-    function _transferFrom(address from, address to, uint256 tokenId) internal {
+    /**
+     * @dev Internal function to burn a specific token.
+     * Reverts if the token does not exist.
+     * Deprecated, use _burn(uint256) instead.
+     * @param owner owner of the token to burn
+     * @param tokenId uint256 ID of the token being burned
+     */
+    function _burn(address owner, uint256 tokenId) internal {
+        require(ownerOf(tokenId) == owner, "ERC721: burn of token that is not own");
 
-        // TODO: require from address is the owner of the given token
-        require(from == ownerOf(tokenId), "From address not owner of token");
-
-        // TODO: require token is being transfered to valid address
-        require(to != address(0), "Token being sent to invalid address");
-
-        // TODO: clear approval
         _clearApproval(tokenId);
 
-        // TODO: update token counts & transfer ownership of the token ID
-        _ownedTokensCount[to].increment();
+        _ownedTokensCount[owner].decrement();
+        _tokenOwner[tokenId] = address(0);
+
+        emit Transfer(owner, address(0), tokenId);
+    }
+
+    /**
+     * @dev Internal function to burn a specific token.
+     * Reverts if the token does not exist.
+     * @param tokenId uint256 ID of the token being burned
+     */
+    function _burn(uint256 tokenId) internal {
+        _burn(ownerOf(tokenId), tokenId);
+    }
+
+    /**
+     * @dev Internal function to transfer ownership of a given token ID to another address.
+     * As opposed to transferFrom, this imposes no restrictions on msg.sender.
+     * @param from current owner of the token
+     * @param to address to receive the ownership of the given token ID
+     * @param tokenId uint256 ID of the token to be transferred
+     */
+    function _transferFrom(address from, address to, uint256 tokenId) internal {
+        require(ownerOf(tokenId) == from, "ERC721: transfer of token that is not own");
+        require(to != address(0), "ERC721: transfer to the zero address");
+
+        _clearApproval(tokenId);
+
         _ownedTokensCount[from].decrement();
+        _ownedTokensCount[to].increment();
 
         _tokenOwner[tokenId] = to;
 
-        // TODO: emit correct event
         emit Transfer(from, to, tokenId);
     }
 
     /**
-     * @dev Internal function to invoke `onERC721Received` on a target address
-     * The call is not executed if the target address is not a contract
+     * @dev Internal function to invoke `onERC721Received` on a target address.
+     * The call is not executed if the target address is not a contract.
+     *
+     * This function is deprecated.
      * @param from address representing the previous owner of the given token ID
      * @param to target address that will receive the tokens
      * @param tokenId uint256 ID of the token to be transferred
@@ -319,7 +471,10 @@ contract ERC721 is Pausable, ERC165 {
         return (retval == _ERC721_RECEIVED);
     }
 
-    // @dev Private function to clear current approval of a given token ID
+    /**
+     * @dev Private function to clear current approval of a given token ID.
+     * @param tokenId uint256 ID of the token to be transferred
+     */
     function _clearApproval(uint256 tokenId) private {
         if (_tokenApprovals[tokenId] != address(0)) {
             _tokenApprovals[tokenId] = address(0);
@@ -506,6 +661,9 @@ contract ERC721Metadata is ERC721Enumerable, usingOraclize {
     string private _symbol;
     string private _baseTokenURI;
 
+    event TokenUriSet(uint256 tokenId, string uri);
+    event TokenUriGet(uint256 tokenId, string uri);
+
     // TODO: create private mapping of tokenId's to token uri's called '_tokenURIs'
     mapping (uint256 => string) private _tokenURIs;
 
@@ -528,20 +686,23 @@ contract ERC721Metadata is ERC721Enumerable, usingOraclize {
     }
 
     // TODO: create external getter functions for name, symbol, and baseTokenURI
-    function getName() external view returns (string memory) {
+    function name() external view returns (string memory) {
         return _name;
     }
 
-    function getSymbol() external view returns (string memory) {
+    function symbol() external view returns (string memory) {
         return _symbol;
     }
 
-    function getbaseTokenURI() external view returns (string memory) {
+    function baseTokenURI() external view returns (string memory) {
         return _baseTokenURI;
     }
 
     function tokenURI(uint256 tokenId) external view returns (string memory) {
         require(_exists(tokenId), "Token doesn't exist");
+
+        //emit TokenUriGet(tokenId, _tokenURIs[tokenId]);
+
         return _tokenURIs[tokenId];
     }
 
@@ -557,6 +718,8 @@ contract ERC721Metadata is ERC721Enumerable, usingOraclize {
 
         string memory tokenstring = uint2str(tokenId);
         _tokenURIs[tokenId] = strConcat(_baseTokenURI, tokenstring);
+
+        emit TokenUriSet(tokenId, strConcat(_baseTokenURI, tokenstring));
     }
 }
 
@@ -571,7 +734,7 @@ contract ERC721Metadata is ERC721Enumerable, usingOraclize {
 
 contract RealEstateToken is ERC721Metadata("Real Estate Token", "RET", "https://s3-us-west-2.amazonaws.com/udacity-blockchain/capstone/"){
 
-    function mint(address to, uint256 tokenId, string memory tokenURI) public returns(bool){
+    function mint(address to, uint256 tokenId) public whenNotPaused onlyOwner returns(bool){
         super._mint(to, tokenId);
         super.setTokenURI(tokenId);
 

@@ -1,0 +1,35 @@
+Hi @AbhishekS ! You can use Docker Toolbox for that. That is available for download in the Docker website and is the recommended for Windows 10 Home. I've also tried using it in the past and it should work. Here are the general steps:
+
+    First, make sure that the project directory (Blockchain-Capstone-master) is saved somewhere under C:\\Users\. In my case it is saved under C:\\Users\<myusername>\Documents
+    Secondly, modify the square.code file and input the variable names required (i.e. those enclosed in <>). The code is computing and returning a square so you may want to use root, square, and result as names.
+    Startup Docker Quickstart and wait for the $ prompt
+    Now we mount the volume inside the container with docker run -v //c/Users/<myusername>/Documents/Blockchain-Capstone-master/zokrates/code:/home/zokrates/code -ti zokrates/zokrates /bin/bash. Notice the lower case c. Wait for the download and setup to finish.
+    You should now be inside the container. Type ls to confirm that you can see the square folder.
+
+* docker run -v /c/Users/Gebruiker/Desktop/UdacityCourses/Blockchain/Capstone/Blockchain-Capstone/zokrates/code/square/
+:/home/zokrates/code -ti zokrates/zokrates /bin/bash
+
+* go to: cd code
+* compile: ../zokrates compile -i square.code
+* ../zokrates setup
+* ../zokrates compute-witness -a 3 9
+* ../zokrates generate-proof
+* ../zokrates export-verifier
+
+----------------------------------------------------------------------------------------
+How To Mint
+
+https://knowledge.udacity.com/questions/45725
+https://youtu.be/8MChn-NJJB0
+
+You have these options
+
+    run mint.js https://docs.opensea.io/discuss/5b5f8d04bd2e60000346086b
+    Use MyEtherWallet to interact with the contract https://vintage.myetherwallet.com/#contracts
+    Use Rinkeby etherscan to interact with the contract https://rinkeby.etherscan.io
+
+----------------------------------------------------------------------------------------
+
+Rinkebey faucet
+
+https://testnet.help/en/ethfaucet/rinkeby#log
